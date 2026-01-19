@@ -1,0 +1,63 @@
+:root {
+    --color-primary: #1a2b48;
+    --color-secondary: #c5a059;
+    --color-background: #f8f9fa;
+    --color-text: #333333;
+}
+
+/* Backgrounds */
+.bg-primary {
+    background-color: var(--color-primary);
+}
+
+.bg-secondary {
+    background-color: var(--color-secondary);
+}
+
+.bg-app-background {
+    background-color: var(--color-background);
+}
+
+/* Text Colors */
+.text-primary {
+    color: var(--color-primary);
+}
+
+.text-secondary {
+    color: var(--color-secondary);
+}
+
+.text-app-text {
+    color: var(--color-text);
+}
+
+/* Borders */
+.border-primary {
+    border-color: var(--color-primary);
+}
+
+.border-secondary {
+    border-color: var(--color-secondary);
+}
+
+/* Tailwind Ring Utilities Overrides (Custom classes for compatibility) */
+.ring-primary {
+    --tw-ring-color: var(--color-primary);
+}
+
+.ring-secondary {
+    --tw-ring-color: var(--color-secondary);
+}
+
+/* Hover States (Custom implementations) */
+.hover\:bg-secondary:hover {
+    background-color: var(--color-secondary);
+}
+
+.hover\:border-secondary:hover {
+    border-color: var(--color-secondary);
+}
+
+.hover\:text-primary:hover {
+    color: var(--color-primary);
+}

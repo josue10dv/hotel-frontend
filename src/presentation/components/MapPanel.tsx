@@ -1,27 +1,24 @@
+import { memo } from "react";
 import { Hotel } from "../../domain/entities/Hotel";
 
 interface MapPanelProps {
   selectedHotel: Hotel | null;
 }
 
-export default function MapPanel({ selectedHotel }: MapPanelProps) {
+const MapPanel = memo(function MapPanel({ selectedHotel }: MapPanelProps) {
   return (
         <div className="top-4 h-[calc(100vh-140px)] w-full bg-gray-200 rounded-3xl overflow-hidden border border-gray-300 shadow-inner group relative">
-            {/* Map Background Pattern / Placeholder */}
             <div className="absolute inset-0 bg-[url('https://api.placeholder.com/map')] opacity-20 bg-cover bg-center grayscale" />
             <div className="absolute inset-0 bg-gray-200 opacity-50" />
 
-            {/* Grid Lines for simulated map look */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]" />
 
-            {/* Center Message or Selected Hotel Pin */}
             <div className="absolute inset-0 flex items-center justify-center p-8">
                 {selectedHotel ? (
                     <div className="flex flex-col items-center animate-bounce-short">
-                        {/* Simulated Pin */}
                         <div className="relative">
-                            <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center shadow-lg border-4 border-white transform -translate-y-1/2">
-                                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center shadow-lg border-4 border-white transform -translate-y-1/2">
+                                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                                 </svg>
                             </div>
@@ -29,9 +26,9 @@ export default function MapPanel({ selectedHotel }: MapPanelProps) {
                         </div>
 
                         <div className="mt-4 bg-white px-6 py-4 rounded-xl shadow-xl border border-gray-100 max-w-sm text-center">
-                            <h3 className="font-bold text-gray-900 text-lg mb-1">{selectedHotel.name}</h3>
+                            <h3 className="font-bold text-app-text text-lg mb-1">{selectedHotel.name}</h3>
                             <p className="text-gray-500 text-sm mb-2">{selectedHotel.city}, {selectedHotel.country}</p>
-                            <div className="flex justify-center items-center gap-1 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs font-bold w-fit mx-auto">
+                            <div className="flex justify-center items-center gap-1 text-primary bg-secondary px-3 py-1 rounded-full text-xs font-bold w-fit mx-auto">
                                 <span className="text-base">${selectedHotel.pricePerNight}</span>
                                 <span className="font-medium">/ night</span>
                             </div>
@@ -56,4 +53,6 @@ export default function MapPanel({ selectedHotel }: MapPanelProps) {
             </div>
         </div>
     );
-}
+});
+
+export default MapPanel;

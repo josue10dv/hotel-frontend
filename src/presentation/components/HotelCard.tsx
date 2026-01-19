@@ -1,3 +1,5 @@
+import { memo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Hotel } from "../../domain/entities/Hotel";
 
 interface HotelCardProps {
@@ -6,7 +8,14 @@ interface HotelCardProps {
   onClick: () => void;
 }
 
-export default function HotelCard({ hotel, isSelected, onClick }: HotelCardProps) {
+const HotelCard = memo(function HotelCard({ hotel, isSelected, onClick }: HotelCardProps) {
+  const navigate = useNavigate();
+
+  const handleViewDetails = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      navigate(`/listing/${hotel.id}`);
+  };
+
   return (
     <div
       onClick={onClick}
@@ -14,12 +23,11 @@ export default function HotelCard({ hotel, isSelected, onClick }: HotelCardProps
         group relative flex flex-col bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300
         ${
           isSelected
-            ? "ring-2 ring-blue-500 shadow-xl scale-[1.02]"
+            ? "ring-2 ring-secondary shadow-xl scale-[1.02]"
             : "border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1"
         }
       `}
     >
-      {/* Image */}
       <div className="relative h-48 w-full overflow-hidden bg-gray-200">
         <img
           src={hotel.imageUrl}
@@ -34,10 +42,9 @@ export default function HotelCard({ hotel, isSelected, onClick }: HotelCardProps
                 </div>
             </div>
 
-            {/* Content */}
             <div className="flex flex-col flex-1 p-4">
                 <div className="mb-2">
-                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors line-clamp-1">
+                    <h3 className="text-lg font-bold text-app-text group-hover:text-primary transition-colors line-clamp-1">
                         {hotel.name}
                     </h3>
                     <p className="text-sm text-gray-500 flex items-center gap-1">
@@ -49,7 +56,6 @@ export default function HotelCard({ hotel, isSelected, onClick }: HotelCardProps
                     </p>
                 </div>
 
-                {/* Amenities */}
                 <div className="flex flex-wrap gap-1 mb-4">
                     {hotel.amenities.slice(0, 3).map((amenity) => (
                         <span
@@ -66,17 +72,23 @@ export default function HotelCard({ hotel, isSelected, onClick }: HotelCardProps
 
                 <div className="mt-auto pt-3 border-t border-gray-100 flex items-end justify-between">
                     <div>
-                        <p className="text-xs text-gray-400 font-medium">Starting from</p>
+                        <p className="text-xs text-app-text font-medium">Desde</p>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-bold text-gray-900">${hotel.pricePerNight}</span>
-                            <span className="text-sm text-gray-500">/night</span>
+                            <span className="text-xl font-bold text-app-text">${hotel.pricePerNight}</span>
+                            <span className="text-sm text-gray-500">/noche</span>
                         </div>
                     </div>
-                    <button className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${isSelected ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-900 group-hover:bg-blue-50 group-hover:text-blue-600'}`}>
-                        {isSelected ? 'Selected' : 'View Details'}
+                    <button 
+                        onClick={handleViewDetails}
+                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${isSelected ? 'bg-primary text-secondary' : 'bg-app-background text-app-text group-hover:bg-primary group-hover:text-secondary'}`}
+                    >
+                        Ver Detalles
                     </button>
+
                 </div>
             </div>
         </div>
     );
-}
+});
+
+export default HotelCard;

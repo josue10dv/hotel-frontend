@@ -1,12 +1,11 @@
 export default function Header() {
   return (
-    <header className="fixed top-0 left-0 right-0 h-16 bg-gray-900 border-b border-gray-800 z-50">
+    <header className="fixed top-0 left-0 right-0 h-16 bg-primary border-b border-white/10 z-50">
       <div className="h-full max-w-[1920px] mx-auto px-6 flex items-center justify-between">
-        {/* Logo */}
         <div className="flex items-center gap-2">
-          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+          <div className="w-8 h-8 bg-secondary rounded-lg flex items-center justify-center">
             <svg
-              className="w-5 h-5 text-white"
+              className="w-5 h-5 text-primary"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -24,10 +23,9 @@ export default function Header() {
           </span>
         </div>
 
-        {/* User Profile */}
         <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full bg-gray-700 border-2 border-gray-600 flex items-center justify-center cursor-pointer hover:border-gray-500 transition-colors">
-            <span className="text-gray-300 font-medium">JD</span>
+          <div className="w-10 h-10 rounded-full bg-white/10 border-2 border-white/20 flex items-center justify-center cursor-pointer hover:border-secondary transition-colors">
+            <span className="text-secondary font-medium">JD</span>
           </div>
         </div>
       </div>

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import HotelCard from "./HotelCard";
 import { Hotel } from "../../domain/entities/Hotel";
 
@@ -7,7 +8,7 @@ interface HotelGridProps {
   onHotelSelect: (id: string) => void;
 }
 
-export default function HotelGrid({ hotels, selectedHotelId, onHotelSelect }: HotelGridProps) {
+const HotelGrid = memo(function HotelGrid({ hotels, selectedHotelId, onHotelSelect }: HotelGridProps) {
   if (hotels.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-dashed border-gray-300">
@@ -46,4 +47,6 @@ export default function HotelGrid({ hotels, selectedHotelId, onHotelSelect }: Ho
             ))}
         </div>
     );
-}
+});
+
+export default HotelGrid;

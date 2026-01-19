@@ -1,15 +1,17 @@
+import { memo } from "react";
+
 interface SearchBarProps {
   value: string;
   onChange: (value: string) => void;
 }
 
-export default function SearchBar({ value, onChange }: SearchBarProps) {
+const SearchBar = memo(function SearchBar({ value, onChange }: SearchBarProps) {
   return (
     <div className="relative w-full max-w-2xl mx-auto">
       <input
         type="text"
-        className="w-full h-14 pl-6 pr-14 bg-white border border-gray-200 rounded-2xl shadow-sm text-lg text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all"
-        placeholder="Search hotels, cities, countries..."
+        className="w-full h-14 pl-6 pr-14 bg-white border border-gray-200 rounded-2xl shadow-sm text-lg text-app-text placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary focus:border-secondary transition-all"
+        placeholder="Buscar hoteles, ciudades, países..."
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -30,5 +32,7 @@ export default function SearchBar({ value, onChange }: SearchBarProps) {
       </div>
     </div>
   );
-}
+});
+
+export default SearchBar;
 
