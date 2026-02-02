@@ -398,7 +398,7 @@ export default function MyReservationsPage() {
                                         </svg>
                                         <span>Habitación {selectedReservation.room_number || selectedReservation.room_id}</span>
                                         {selectedReservation.room_type && (
-                                            <span className="ml-2 px-2 py-1 bg-white rounded-lg text-sm">
+                                            <span className="ml-2 px-2 py-1 bg-white rounded-lg text-sm text-gray-900">
                                                 {selectedReservation.room_type}
                                             </span>
                                         )}
