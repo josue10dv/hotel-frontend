@@ -1,56 +1,159 @@
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import { Hotel } from "../../domain/entities/Hotel";
+import { getMediaUrl } from "../../config/api.config";
+
+// Fix para los iconos de Leaflet en Vite
+delete (L.Icon.Default.prototype as any)._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+// Icono personalizado para hotel seleccionado
+const selectedIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
+
+// Icono por defecto para hoteles no seleccionados
+const defaultIcon = new L.Icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-blue.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+});
 
 interface MapPanelProps {
-  selectedHotel: Hotel | null;
+    selectedHotel: Hotel | null;
+    hotels: Hotel[];
+    onHotelSelect?: (id: string) => void;
 }
 
-const MapPanel = memo(function MapPanel({ selectedHotel }: MapPanelProps) {
-  return (
-        <div className="top-4 h-[calc(100vh-140px)] w-full bg-gray-200 rounded-3xl overflow-hidden border border-gray-300 shadow-inner group relative">
-            <div className="absolute inset-0 bg-[url('https://api.placeholder.com/map')] opacity-20 bg-cover bg-center grayscale" />
-            <div className="absolute inset-0 bg-gray-200 opacity-50" />
+// Componente para ajustar la vista del mapa
+function MapViewUpdater({ hotels, selectedHotel }: { hotels: Hotel[], selectedHotel: Hotel | null }) {
+    const map = useMap();
+    const prevHotelsRef = useRef<Hotel[]>([]);
 
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px]" />
+    useEffect(() => {
+        if (selectedHotel && selectedHotel.location) {
+            // Centrar en hotel seleccionado
+            map.setView([selectedHotel.location.lat, selectedHotel.location.lng], 14, {
+                animate: true
+            });
+        } else if (hotels.length > 0 && JSON.stringify(hotels) !== JSON.stringify(prevHotelsRef.current)) {
+            // Ajustar vista para mostrar todos los hoteles
+            const validLocations = hotels.filter(h => h.location && h.location.lat && h.location.lng);
+            if (validLocations.length > 0) {
+                const bounds = L.latLngBounds(
+                    validLocations.map(h => [h.location!.lat, h.location!.lng])
+                );
+                map.fitBounds(bounds, { padding: [50, 50], maxZoom: 13 });
+            }
+            prevHotelsRef.current = hotels;
+        }
+    }, [hotels, selectedHotel, map]);
 
-            <div className="absolute inset-0 flex items-center justify-center p-8">
-                {selectedHotel ? (
-                    <div className="flex flex-col items-center animate-bounce-short">
-                        <div className="relative">
-                            <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center shadow-lg border-4 border-white transform -translate-y-1/2">
-                                <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-                                </svg>
-                            </div>
-                            <div className="absolute top-full left-1/2 -translate-x-1/2 w-4 h-2 bg-black/20 blur-sm rounded-full" />
-                        </div>
+    return null;
+}
 
-                        <div className="mt-4 bg-white px-6 py-4 rounded-xl shadow-xl border border-gray-100 max-w-sm text-center">
-                            <h3 className="font-bold text-app-text text-lg mb-1">{selectedHotel.name}</h3>
-                            <p className="text-gray-500 text-sm mb-2">{selectedHotel.city}, {selectedHotel.country}</p>
-                            <div className="flex justify-center items-center gap-1 text-primary bg-secondary px-3 py-1 rounded-full text-xs font-bold w-fit mx-auto">
-                                <span className="text-base">${selectedHotel.pricePerNight}</span>
-                                <span className="font-medium">/ night</span>
-                            </div>
-                        </div>
+const MapPanel = memo(function MapPanel({ selectedHotel, hotels, onHotelSelect }: MapPanelProps) {
+    // Centro por defecto: América Latina
+    const defaultCenter: [number, number] = [-9.1900, -75.0152];
+    const defaultZoom = 5;
+
+    // Filtrar hoteles con ubicación válida
+    const hotelsWithLocation = hotels.filter(
+        h => h.location && h.location.lat && h.location.lng
+    );
+
+    if (hotelsWithLocation.length === 0) {
+        return (
+            <div className="h-full w-full bg-gray-200 rounded-3xl overflow-hidden border border-gray-300 shadow-inner flex items-center justify-center">
+                <div className="text-center text-gray-400">
+                    <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                        </svg>
                     </div>
-                ) : (
-                    <div className="text-center text-gray-400">
-                        <div className="w-16 h-16 bg-gray-300 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <p className="font-medium">Select a hotel to view on map</p>
-                    </div>
-                )}
+                    <p className="font-medium">No hay hoteles con ubicación disponible</p>
+                </div>
             </div>
+        );
+    }
 
-            {/* Map UI Controls Placeholder */}
-            <div className="absolute right-4 bottom-4 flex flex-col gap-2">
-                <div className="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer">+</div>
-                <div className="w-10 h-10 bg-white rounded-lg shadow-md flex items-center justify-center text-gray-600 hover:bg-gray-50 cursor-pointer">-</div>
-            </div>
+    return (
+        <div className="h-full w-full rounded-3xl overflow-hidden border border-gray-300 shadow-lg">
+            <MapContainer
+                center={defaultCenter}
+                zoom={defaultZoom}
+                style={{ height: '100%', width: '100%' }}
+                className="z-0"
+            >
+                <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                />
+
+                <MapViewUpdater hotels={hotelsWithLocation} selectedHotel={selectedHotel} />
+
+                {hotelsWithLocation.map((hotel) => (
+                    <Marker
+                        key={hotel.id}
+                        position={[hotel.location!.lat, hotel.location!.lng]}
+                        icon={selectedHotel?.id === hotel.id ? selectedIcon : defaultIcon}
+                        eventHandlers={{
+                            click: () => {
+                                if (onHotelSelect) {
+                                    onHotelSelect(hotel.id);
+                                }
+                            },
+                        }}
+                    >
+                        <Popup>
+                            <div className="min-w-[200px]">
+                                {hotel.images && hotel.images[0] && (
+                                    <img
+                                        src={getMediaUrl(hotel.images[0])}
+                                        alt={hotel.name}
+                                        className="w-full h-32 object-cover rounded-lg mb-2"
+                                    />
+                                )}
+                                <h3 className="font-bold text-app-text text-base mb-1">
+                                    {hotel.name}
+                                </h3>
+                                <p className="text-gray-500 text-sm mb-2">
+                                    {hotel.address.city}, {hotel.address.country}
+                                </p>
+                                {hotel.rating && (
+                                    <div className="flex items-center gap-1 mb-2">
+                                        <span className="text-yellow-500">★</span>
+                                        <span className="font-semibold text-sm">{hotel.rating.toFixed(2)}</span>
+                                        {hotel.total_reviews && (
+                                            <span className="text-gray-400 text-xs">({hotel.total_reviews} reviews)</span>
+                                        )}
+                                    </div>
+                                )}
+                                {hotel.min_price && (
+                                    <div className="flex items-center gap-1 text-primary font-bold">
+                                        <span className="text-lg">${hotel.min_price}</span>
+                                        <span className="font-medium text-sm text-gray-600">/ noche</span>
+                                    </div>
+                                )}
+                            </div>
+                        </Popup>
+                    </Marker>
+                ))}
+            </MapContainer>
         </div>
     );
 });

@@ -1,5 +1,6 @@
 import React, { memo } from 'react';
 import { Review } from '../../../domain/entities/Hotel';
+import { getMediaUrl } from '../../../config/api.config';
 
 interface ReviewGridProps {
   reviews: Review[];
@@ -16,14 +17,14 @@ export const ReviewGrid = memo(function ReviewGrid({ reviews, rating }: ReviewGr
             {/* Large Avatar */}
             <div className="flex-shrink-0">
               <img
-                src={review.userAvatar}
-                alt={review.userName}
+                src={getMediaUrl(review.user_avatar)}
+                alt={review.user_name}
                 className="w-16 h-16 rounded-full object-cover"
               />
             </div>
 
             <div className="flex-1 space-y-2">
-              <h4 className="font-semibold text-lg text-gray-900">{review.userName}</h4>
+              <h4 className="font-semibold text-lg text-gray-900">{review.user_name}</h4>
               <p className="text-gray-600 leading-relaxed text-sm">
                 {review.comment}
               </p>

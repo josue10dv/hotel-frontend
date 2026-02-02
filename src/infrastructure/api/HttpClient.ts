@@ -10,15 +10,18 @@ export class HttpClient {
     private baseURL: string;
     private timeout: number;
     private headers: Record<string, string>;
+    private withCredentials: boolean;
 
     constructor(
         baseURL: string = API_CONFIG.baseURL,
         timeout: number = API_CONFIG.timeout,
-        headers: Record<string, string> = API_CONFIG.headers
+        headers: Record<string, string> = API_CONFIG.headers,
+        withCredentials: boolean = API_CONFIG.withCredentials
     ) {
         this.baseURL = baseURL;
         this.timeout = timeout;
         this.headers = headers;
+        this.withCredentials = withCredentials;
     }
 
     private async request<T>(
@@ -29,12 +32,12 @@ export class HttpClient {
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
-        const token = localStorage.getItem('auth_token');
+        const token = localStorage.getItem('access_token');
         const requestHeaders: Record<string, string> = {
             ...this.headers,
             ...options.headers as Record<string, string>,
         };
-        
+
         if (token) {
             requestHeaders['Authorization'] = `Bearer ${token}`;
         }
@@ -43,17 +46,21 @@ export class HttpClient {
             const response = await fetch(url, {
                 ...options,
                 headers: requestHeaders,
-                credentials: 'include',
+                credentials: this.withCredentials ? 'include' : 'same-origin',
                 signal: controller.signal,
             });
 
             clearTimeout(timeoutId);
 
-            if (response.status === 401) {
+            // Manejar token expirado
+            if (response.status === 401 && token) {
                 const refreshed = await this.handleTokenRefresh();
                 if (refreshed) {
+                    // Reintentar la petición original con el nuevo token
                     return this.request<T>(endpoint, options);
                 }
+                // Si el refresh falló, limpiar y lanzar error
+                this.clearAuth();
                 throw {
                     message: 'Sesión expirada. Por favor, inicia sesión nuevamente.',
                     status: 401,
@@ -63,17 +70,21 @@ export class HttpClient {
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw {
-                    message: errorData.message || errorData.detail || `HTTP Error: ${response.status}`,
+                    message: errorData.error || errorData.detail || errorData.message || `HTTP Error: ${response.status}`,
                     status: response.status,
                     data: errorData,
                 } as HttpError;
             }
 
+            // Manejar respuestas sin contenido
             if (response.status === 204 || response.status === 205) {
                 return {} as T;
             }
 
-            return await response.json();
+            const data = await response.json();
+
+            // La API puede retornar { data: {...} } o directamente el objeto
+            return data.data !== undefined ? data.data : data;
         } catch (error: any) {
             clearTimeout(timeoutId);
 
@@ -100,23 +111,29 @@ export class HttpClient {
             const response = await fetch(`${this.baseURL}/auth/refresh/`, {
                 method: 'POST',
                 headers: this.headers,
-                credentials: 'include',
+                credentials: 'include', // Importante para enviar la cookie con el refresh token
             });
 
             if (response.ok) {
                 const data = await response.json();
-                localStorage.setItem('auth_token', data.access);
-                return true;
+                const newAccessToken = data.access || data.data?.access;
+                if (newAccessToken) {
+                    localStorage.setItem('access_token', newAccessToken);
+                    return true;
+                }
             }
-            
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user');
+
+            this.clearAuth();
             return false;
         } catch {
-            localStorage.removeItem('auth_token');
-            localStorage.removeItem('user');
+            this.clearAuth();
             return false;
         }
+    }
+
+    private clearAuth(): void {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user');
     }
 
     async get<T>(endpoint: string, params?: Record<string, any>): Promise<T> {

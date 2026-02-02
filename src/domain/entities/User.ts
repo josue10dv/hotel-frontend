@@ -2,8 +2,7 @@ export interface User {
   id: string;
   username: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  full_name: string;
   user_type: 'guest' | 'owner';
   is_active: boolean;
   date_joined: string;
@@ -20,9 +19,8 @@ export interface RegisterData {
   email: string;
   password: string;
   password_confirm: string;
-  first_name?: string;
-  last_name?: string;
-  user_type?: 'guest' | 'owner';
+  full_name: string;
+  user_type: 'guest' | 'owner';
 }
 
 export interface AuthResponse {

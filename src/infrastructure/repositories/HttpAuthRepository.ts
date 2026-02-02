@@ -6,70 +6,71 @@ import { API_ENDPOINTS } from "../../config/api.config";
 export class HttpAuthRepository implements AuthRepository {
   async loginWithEmail(credentials: AuthCredentials): Promise<AuthResponse> {
     try {
-      const response = await httpClient.post<AuthResponse>(
+      const response = await httpClient.post<{ status: string; data: AuthResponse }>(
         API_ENDPOINTS.auth.login,
-        credentials
+        {
+          username: credentials.email || credentials.username,
+          password: credentials.password
+        }
       );
       
-      if (response.access) {
-        localStorage.setItem('auth_token', response.access);
-        localStorage.setItem('user', JSON.stringify(response.user));
+      // Extraer data de la respuesta anidada
+      const authData = response.data || response;
+      
+      // Guardar access token (el refresh token se guarda automáticamente en cookie HTTP-only)
+      if (authData.access) {
+        localStorage.setItem('access_token', authData.access);
+        localStorage.setItem('user', JSON.stringify(authData.user));
       }
       
-      return response;
+      return authData;
     } catch (error: any) {
       console.error('Error en login con email:', error);
-      throw new Error(error.message || 'Error al iniciar sesión');
-    }
-  }
-
-  async loginWithGoogle(): Promise<AuthResponse> {
-    try {
-      const response = await httpClient.post<AuthResponse>(
-        '/auth/google/',
-        {}
-      );
-      
-      if (response.access) {
-        localStorage.setItem('auth_token', response.access);
-        localStorage.setItem('user', JSON.stringify(response.user));
-      }
-      
-      return response;
-    } catch (error: any) {
-      console.error('Error en login con Google:', error);
-      throw new Error(error.message || 'Error al iniciar sesión con Google');
+      throw new Error(error.message || 'Credenciales inválidas');
     }
   }
 
   async register(data: RegisterData): Promise<{ message: string; user: Partial<User> }> {
     try {
-      const response = await httpClient.post<{ message: string; user: Partial<User> }>(
-        API_ENDPOINTS.auth.register,
+      const response = await httpClient.post<{ message: string; data: Partial<User> }>(
+        API_ENDPOINTS.users.register,
         data
       );
-      return response;
+      
+      return {
+        message: response.message,
+        user: response.data
+      };
     } catch (error: any) {
       console.error('Error en registro:', error);
+      
+      // Manejar errores de validación del backend
+      if (error.data && typeof error.data === 'object') {
+        const messages = Object.entries(error.data)
+          .map(([field, errors]) => `${field}: ${Array.isArray(errors) ? errors.join(', ') : errors}`)
+          .join('\n');
+        throw new Error(messages);
+      }
+      
       throw new Error(error.message || 'Error al registrar usuario');
     }
   }
 
   async refreshToken(): Promise<RefreshResponse> {
     try {
-      const response = await httpClient.post<RefreshResponse>(
+      const response = await httpClient.post<{ access: string }>(
         API_ENDPOINTS.auth.refresh,
-        {}
+        {} // No body needed, el backend lee la cookie con el refresh token
       );
       
       if (response.access) {
-        localStorage.setItem('auth_token', response.access);
+        localStorage.setItem('access_token', response.access);
       }
       
-      return response;
+      return { access: response.access };
     } catch (error: any) {
       console.error('Error al refrescar token:', error);
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('access_token');
       localStorage.removeItem('user');
       throw new Error(error.message || 'Sesión expirada');
     }
@@ -80,15 +81,16 @@ export class HttpAuthRepository implements AuthRepository {
       await httpClient.post(API_ENDPOINTS.auth.logout, {});
     } catch (error: any) {
       console.error('Error en logout:', error);
+      // Continuar con la limpieza local incluso si falla la petición al servidor
     } finally {
-      localStorage.removeItem('auth_token');
+      localStorage.removeItem('access_token');
       localStorage.removeItem('user');
     }
   }
 
   async getCurrentUser(): Promise<User> {
     try {
-      const response = await httpClient.get<User>(API_ENDPOINTS.auth.me);
+      const response = await httpClient.get<User>(API_ENDPOINTS.users.me);
       localStorage.setItem('user', JSON.stringify(response));
       return response;
     } catch (error: any) {
@@ -99,16 +101,21 @@ export class HttpAuthRepository implements AuthRepository {
 
   async updateUser(id: string, data: Partial<User>): Promise<{ message: string; user: User }> {
     try {
-      const response = await httpClient.patch<{ message: string; user: User }>(
-        API_ENDPOINTS.auth.updateUser(id),
+      const response = await httpClient.patch<{ message: string; data: User }>(
+        API_ENDPOINTS.users.update(id),
         data
       );
       
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
+      // Actualizar usuario en localStorage si es el usuario actual
+      const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+      if (currentUser.id === id) {
+        localStorage.setItem('user', JSON.stringify(response.data));
       }
       
-      return response;
+      return {
+        message: response.message,
+        user: response.data
+      };
     } catch (error: any) {
       console.error('Error al actualizar usuario:', error);
       throw new Error(error.message || 'Error al actualizar usuario');
@@ -118,13 +125,20 @@ export class HttpAuthRepository implements AuthRepository {
   async changePassword(id: string, data: ChangePasswordData): Promise<{ message: string }> {
     try {
       const response = await httpClient.post<{ message: string }>(
-        API_ENDPOINTS.auth.changePassword(id),
+        API_ENDPOINTS.users.changePassword(id),
         data
       );
       return response;
     } catch (error: any) {
       console.error('Error al cambiar contraseña:', error);
+      
+      // Manejar errores de validación del backend
+      if (error.data && typeof error.data === 'object') {
+        const messages = Object.values(error.data).flat().join('\n');
+        throw new Error(messages);
+      }
+      
       throw new Error(error.message || 'Error al cambiar contraseña');
-        }
     }
+  }
 }

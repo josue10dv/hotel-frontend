@@ -5,6 +5,7 @@ import CategoryChips from "../components/CategoryChips";
 import HotelGrid from "../components/HotelGrid";
 import MapPanel from "../components/MapPanel";
 import { useHotels } from "../hooks/useHotels";
+import { HomeLayout } from "../components/layouts";
 
 export default function HomePage() {
     const {
@@ -22,7 +23,7 @@ export default function HomePage() {
     } = useHotels();
 
     return (
-        <div className="min-h-screen bg-app-background font-sans">
+        <HomeLayout>
             <main className="pt-24 pb-8 px-8 max-w-[1600px] mx-auto">
 
                 <div className="flex flex-col items-center gap-6 mb-10">
@@ -70,11 +71,15 @@ export default function HomePage() {
                     </div>
 
                     <div className="col-span-7 sticky top-24 h-[calc(100vh-8rem)]">
-                        <MapPanel selectedHotel={selectedHotel} />
+                        <MapPanel
+                            selectedHotel={selectedHotel}
+                            hotels={hotels}
+                            onHotelSelect={handleHotelSelect}
+                        />
                     </div>
 
                 </div>
             </main>
-        </div>
+        </HomeLayout>
     );
 }

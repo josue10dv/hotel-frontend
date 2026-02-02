@@ -1,30 +1,20 @@
 import { memo } from 'react';
-import { hotelService } from '../../infrastructure/services/HotelService';
 
 const DevTools = memo(function DevTools() {
-    const currentMode = hotelService.getCurrentMode();
-
-    const toggleMode = () => {
-        const newMode = currentMode === 'http' ? 'memory' : 'http';
-        hotelService.switchMode(newMode);
-        window.location.reload();
-    };
-
     if (import.meta.env.MODE !== 'development') {
         return null;
     }
 
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+
     return (
         <div className="fixed bottom-4 right-4 z-50 bg-gray-800 text-white px-4 py-2 rounded-lg shadow-lg text-sm">
-            <button
-                onClick={toggleMode}
-                className="flex items-center gap-2 hover:bg-gray-700 px-2 py-1 rounded transition-colors"
-            >
-                <div className={`w-2 h-2 rounded-full ${currentMode === 'http' ? 'bg-green-400' : 'bg-yellow-400'}`} />
+            <div className="flex items-center gap-2 px-2 py-1">
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
                 <span className="font-mono">
-                    {currentMode === 'http' ? '🌐 Backend HTTP' : '💾 Datos Mock'}
+                    🌐 API: {apiUrl}
                 </span>
-            </button>
+            </div>
         </div>
     );
 });

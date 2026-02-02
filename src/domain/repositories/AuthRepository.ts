@@ -2,7 +2,6 @@ import { AuthCredentials, AuthResponse, RefreshResponse, RegisterData, User, Cha
 
 export interface AuthRepository {
   loginWithEmail(credentials: AuthCredentials): Promise<AuthResponse>;
-  loginWithGoogle(): Promise<AuthResponse>;
   register(data: RegisterData): Promise<{ message: string; user: Partial<User> }>;
   refreshToken(): Promise<RefreshResponse>;
   logout(): Promise<void>;

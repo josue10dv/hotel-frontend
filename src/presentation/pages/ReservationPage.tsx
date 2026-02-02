@@ -1,118 +1,213 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Hotel } from '../../domain/entities/Hotel';
-import { hotelService } from '../../infrastructure/services/HotelService';
+import React, { useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { ImageGallery } from '../components/listing/ImageGallery';
 import { BookingWidget } from '../components/listing/BookingWidget';
-import { ReviewGrid } from '../components/listing/ReviewGrid';
+import { RatingBanner } from '../components/listing/RatingBanner';
+import { ReviewsSection } from '../components/listing/ReviewsSection';
+import { GoogleMap } from '../components/listing/GoogleMap';
+import { MainLayout } from '../components/layouts';
+import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { ErrorState } from '../components/common/ErrorState';
+import { Breadcrumb } from '../components/common/Breadcrumb';
+import { InfoCard } from '../components/common/InfoCard';
+import { useHotelDetails } from '../hooks/useHotelDetails';
+import { useAuthContext } from '../context/AuthContext';
 
+// Clases de Tailwind constantes para consistencia
+const CONTAINER_STYLES = 'container mx-auto px-4 py-8 max-w-[1400px]';
+const GRID_MAIN_STYLES = 'grid grid-cols-1 lg:grid-cols-3 gap-8';
+const GRID_INFO_STYLES = 'grid grid-cols-1 md:grid-cols-2 gap-6';
+const SECTION_SPACING = 'space-y-8';
+const STICKY_SIDEBAR_STYLES = 'sticky top-24 space-y-4';
+const AMENITY_ITEM_STYLES = 'flex items-center gap-2 text-app-text';
+const POLICY_ITEM_STYLES = 'space-y-4';
+
+/**
+ * Página de detalles y reservación de hotel
+ * Muestra información completa del hotel, galería, políticas y reseñas
+ * Incluye widget de reservación en sidebar sticky
+ */
 export const ReservationPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
-    const [hotel, setHotel] = useState<Hotel | undefined>(undefined);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const navigate = useNavigate();
+    const { user } = useAuthContext();
+    const { hotel, loading, error, showAllReviews, toggleShowAllReviews } = useHotelDetails(id);
 
+    // Protección de ruta: redirigir a login si no hay sesión activa
     useEffect(() => {
-        if (id) {
-            const fetchHotel = async () => {
-                try {
-                    setLoading(true);
-                    setError(null);
-                    const data = await hotelService.getHotelByIdUseCase.execute(id);
-                    setHotel(data);
-                } catch (err: any) {
-                    setError(err.message || 'Error al cargar el hotel');
-                    console.error('Error cargando hotel:', err);
-                } finally {
-                    setLoading(false);
-                }
-            };
-            fetchHotel();
+        if (!user) {
+            // Guardar la URL actual para redirigir después del login
+            localStorage.setItem('redirectAfterLogin', window.location.pathname);
+            navigate('/login', { replace: true });
         }
-    }, [id]);
+    }, [user, navigate]);
 
+    // Estado de carga
     if (loading) {
         return (
-            <div className="container mx-auto px-4 py-8 flex justify-center items-center h-screen">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
+            <MainLayout>
+                <LoadingSpinner message="Cargando detalles del hotel..." />
+            </MainLayout>
         );
     }
 
+    // Estado de error o sin datos
     if (!hotel) {
         return (
-            <div className="container mx-auto px-4 py-8 text-center pt-24">
-                {error ? (
-                    <>
-                        <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                        </div>
-                        <h1 className="text-2xl font-bold text-gray-800 mb-2">Error al cargar hotel</h1>
-                        <p className="text-red-600 mb-4">{error}</p>
-                    </>
-                ) : (
-                    <>
-                        <h1 className="text-2xl font-bold text-gray-800 mb-4">Hotel no encontrado</h1>
-                    </>
-                )}
-                <Link to="/" className="text-primary hover:underline mt-4 block">Volver al Inicio</Link>
-            </div>
+            <MainLayout>
+                <ErrorState
+                    title={error ? 'Error al cargar hotel' : 'Hotel no encontrado'}
+                    message={error || undefined}
+                />
+            </MainLayout>
         );
     }
 
+    // Preparar items del breadcrumb
+    const breadcrumbItems = [
+        { label: 'Inicio', path: '/' },
+        { label: hotel.name }
+    ];
+
     return (
-        <div className="min-h-screen bg-white">
-            <main className="container mx-auto px-4 py-8 pt-24 max-w-[1400px]">
-                
-                 <div className="mb-6">
-                    <h1 className="text-3xl font-bold text-gray-900">{hotel.name}</h1>
-                </div>
+        <MainLayout>
+            <div className={CONTAINER_STYLES}>
+                {/* Navegación breadcrumb */}
+                <Breadcrumb items={breadcrumbItems} />
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div className="rounded-3xl overflow-hidden h-fit">
-                        <ImageGallery images={hotel.gallery || [hotel.imageUrl]} />
-                    </div>
+                {/* Header del hotel */}
+                <header className="mb-8">
+                    <h1 className="text-4xl font-bold text-primary mb-2">
+                        {hotel.name}
+                    </h1>
+                    <p className="text-sm text-gray-600">
+                        {hotel.address.city}, {hotel.address.state}, {hotel.address.country}
+                    </p>
+                </header>
 
-                    <div className="flex flex-col gap-6">
-                         
-                         <div className="flex items-center gap-4">
-                            <img
-                                src={hotel.host?.avatar || "https://i.pravatar.cc/150?u=default"}
-                                alt={hotel.host?.name}
-                                className="w-16 h-16 rounded-full object-cover shadow-sm"
+                {/* Grid principal: Contenido y Sidebar */}
+                <div className={GRID_MAIN_STYLES}>
+                    {/* Columna principal: Contenido */}
+                    <div className={`lg:col-span-2 ${SECTION_SPACING}`}>
+                        {/* Galería de imágenes */}
+                        <section className="rounded-2xl overflow-hidden">
+                            <ImageGallery images={hotel.images} />
+                        </section>
+
+                        {/* Grid de información: Descripción/Comodidades | Políticas */}
+                        <div className={GRID_INFO_STYLES}>
+                            {/* Descripción y Comodidades */}
+                            <InfoCard title="" className="space-y-6">
+                                {/* Descripción */}
+                                <div>
+                                    <h3 className="text-xl font-bold text-primary mb-4">
+                                        Sobre este alojamiento
+                                    </h3>
+                                    <p className="text-app-text leading-relaxed">
+                                        {hotel.description}
+                                    </p>
+                                </div>
+
+                                {/* Comodidades */}
+                                <div className="pt-6 border-t border-gray-200">
+                                    <h3 className="text-xl font-bold text-primary mb-4">
+                                        Comodidades
+                                    </h3>
+                                    <ul className="grid grid-cols-1 gap-3">
+                                        {hotel.amenities.map((amenity, index) => (
+                                            <li key={index} className={AMENITY_ITEM_STYLES}>
+                                                <svg
+                                                    className="w-5 h-5 text-secondary flex-shrink-0"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    viewBox="0 0 24 24"
+                                                    aria-hidden="true"
+                                                >
+                                                    <path
+                                                        strokeLinecap="round"
+                                                        strokeLinejoin="round"
+                                                        strokeWidth={2}
+                                                        d="M5 13l4 4L19 7"
+                                                    />
+                                                </svg>
+                                                <span>{amenity}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </InfoCard>
+
+                            {/* Políticas */}
+                            <InfoCard title="Políticas">
+                                <div className={POLICY_ITEM_STYLES}>
+                                    <PolicyItem
+                                        title="Check-in"
+                                        value={hotel.policies.check_in_time}
+                                    />
+                                    <PolicyItem
+                                        title="Check-out"
+                                        value={hotel.policies.check_out_time}
+                                    />
+                                    <PolicyItem
+                                        title="Política de cancelación"
+                                        value={hotel.policies.cancellation_policy}
+                                    />
+                                    <PolicyItem
+                                        title="Política de mascotas"
+                                        value={hotel.policies.pet_policy}
+                                    />
+                                </div>
+                            </InfoCard>
+                        </div>
+
+                        {/* Sección de reseñas */}
+                        <ReviewsSection
+                            reviews={hotel.reviews || []}
+                            showAll={showAllReviews}
+                            onToggleShowAll={toggleShowAllReviews}
+                        />
+
+                        {/* Sección de mapa - Ubicación */}
+                        {hotel.location && (
+                            <GoogleMap
+                                location={hotel.location}
+                                hotelName={hotel.name}
+                                address={`${hotel.address.street}, ${hotel.address.city}, ${hotel.address.state}, ${hotel.address.country}`}
                             />
-                            <div>
-                                <h2 className="text-xl font-bold text-gray-900">{hotel.host?.name || "Anfitrion"}</h2>
-                                <p className="text-gray-500 text-sm">Anfitrión</p>
-                            </div>
-                        </div>
-
-                        <div className="bg-[#4b5563] text-white p-6 rounded-3xl shadow-lg flex flex-col justify-center">
-                            <div className="text-3xl font-bold mb-1 flex items-center gap-2">
-                                <span>★ {hotel.rating}</span>
-                            </div>
-                             <div className="text-gray-300 text-sm">{hotel.reviews?.length || 0} reseñas</div>
-                        </div>
-
-                        <div>
-                             <h3 className="font-bold text-gray-900 mb-2">Sobre este alojamiento</h3>
-                             <p className="text-gray-600 leading-relaxed text-sm">
-                                {hotel.description || "Descripción no disponible."}
-                             </p>
-                        </div>
-
-                        <BookingWidget pricePerNight={hotel.pricePerNight} />
-
+                        )}
                     </div>
-                </div>
 
-                 <div className="mt-16">
-                     <ReviewGrid reviews={hotel.reviews || []} rating={hotel.rating} />
-                 </div>
-            </main>
-        </div>
+                    {/* Sidebar: Widget de reservación y rating */}
+                    <aside className="lg:col-span-1">
+                        <div className={STICKY_SIDEBAR_STYLES}>
+                            <RatingBanner
+                                rating={hotel.rating}
+                                reviewCount={hotel.reviews?.length || 0}
+                                title={hotel.ratingInfo?.title}
+                                subtitle={hotel.ratingInfo?.subtitle}
+                                variant="compact"
+                            />
+                            <BookingWidget 
+                                hotelId={hotel.id}
+                                roomId={hotel.rooms?.[0]?.room_id || 'default-room'}
+                                pricePerNight={hotel.min_price || 100}
+                            />
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </MainLayout>
     );
 };
+
+/**
+ * Componente auxiliar para items de política
+ * Muestra título y valor de forma consistente
+ */
+const PolicyItem: React.FC<{ title: string; value: string }> = ({ title, value }) => (
+    <div>
+        <h4 className="font-semibold text-app-text mb-1">{title}</h4>
+        <p className="text-gray-600">{value}</p>
+    </div>
+);
 

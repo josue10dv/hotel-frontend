@@ -12,132 +12,167 @@ import { httpClient } from "../api/HttpClient";
 import { API_ENDPOINTS } from "../../config/api.config";
 
 export class HttpReservationRepository implements ReservationRepository {
-    async createReservation(data: CreateReservationData): Promise<{ message: string; data: Reservation }> {
+    async createReservation(data: CreateReservationData): Promise<Reservation> {
         try {
-            const response = await httpClient.post<{ message: string; data: Reservation }>(
+            return await httpClient.post<Reservation>(
                 API_ENDPOINTS.reservations.create,
                 data
             );
-            return response;
         } catch (error: any) {
             console.error('Error al crear reservación:', error);
-            throw new Error(error.message || 'Error al crear la reservación');
+            throw new Error(error.message || 'No se pudo crear la reservación');
         }
     }
 
     async getMyReservations(filters?: ReservationFilters): Promise<PaginatedResponse<Reservation>> {
         try {
-            const response = await httpClient.get<PaginatedResponse<Reservation>>(
-                API_ENDPOINTS.reservations.getAll,
-                filters
+            const queryParams: Record<string, string> = {};
+
+            if (filters) {
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value !== undefined && value !== null && value !== '') {
+                        queryParams[key] = String(value);
+                    }
+                });
+            }
+
+            const response = await httpClient.get<{ count: number; reservations: Reservation[] }>(
+                API_ENDPOINTS.reservations.myReservations,
+                { params: queryParams }
             );
-            return response;
+
+            return {
+                count: response.count,
+                results: response.reservations,
+            };
         } catch (error: any) {
-            console.error('Error al obtener reservaciones:', error);
-            throw new Error(error.message || 'Error al cargar las reservaciones');
+            console.error('Error al obtener mis reservaciones:', error);
+            throw new Error(error.message || 'No se pudieron cargar tus reservaciones');
         }
     }
 
     async getReservationById(id: string): Promise<Reservation> {
         try {
-            const response = await httpClient.get<Reservation>(
+            const reservation = await httpClient.get<Reservation>(
                 API_ENDPOINTS.reservations.getById(id)
             );
-            return response;
+            return reservation;
         } catch (error: any) {
             console.error(`Error al obtener reservación ${id}:`, error);
-            throw new Error(error.message || 'Error al cargar la reservación');
+            throw new Error(error.message || 'No se pudo cargar la reservación');
         }
     }
 
-    async cancelReservation(id: string, data: CancelReservationData): Promise<{ message: string; data: Reservation }> {
+    async cancelReservation(id: string, data?: CancelReservationData): Promise<Reservation> {
         try {
-            const response = await httpClient.patch<{ message: string; data: Reservation }>(
+            return await httpClient.patch<Reservation>(
                 API_ENDPOINTS.reservations.cancel(id),
-                data
+                data || {}
             );
-            return response;
         } catch (error: any) {
-            console.error(`Error al cancelar reservación ${id}:`, error);
-            throw new Error(error.message || 'Error al cancelar la reservación');
+            console.error('Error al cancelar reservación:', error);
+            throw new Error(error.message || 'No se pudo cancelar la reservación');
         }
     }
 
     async checkAvailability(params: CheckAvailabilityParams): Promise<AvailabilityResponse> {
         try {
-            const response = await httpClient.get<AvailabilityResponse>(
+            const queryParams: Record<string, any> = {
+                hotel_id: params.hotel_id,
+                room_id: params.room_id,
+                check_in: params.check_in,
+                check_out: params.check_out,
+            };
+
+            return await httpClient.get<AvailabilityResponse>(
                 API_ENDPOINTS.reservations.checkAvailability,
-                params as any
+                { params: queryParams }
             );
-            return response;
         } catch (error: any) {
             console.error('Error al verificar disponibilidad:', error);
-            throw new Error(error.message || 'Error al verificar disponibilidad');
+            throw new Error(error.message || 'No se pudo verificar la disponibilidad');
         }
     }
 
+    // Endpoints para propietarios
     async getPropertyReservations(filters?: ReservationFilters): Promise<PaginatedResponse<Reservation>> {
         try {
-            const response = await httpClient.get<PaginatedResponse<Reservation>>(
+            const queryParams: Record<string, string> = {};
+
+            if (filters) {
+                Object.entries(filters).forEach(([key, value]) => {
+                    if (value !== undefined && value !== null && value !== '') {
+                        queryParams[key] = String(value);
+                    }
+                });
+            }
+
+            const response = await httpClient.get<{ count: number; reservations: Reservation[] }>(
                 API_ENDPOINTS.reservations.myProperties,
-                filters
+                { params: queryParams }
             );
-            return response;
+
+            return {
+                count: response.count,
+                results: response.reservations,
+            };
         } catch (error: any) {
             console.error('Error al obtener reservaciones de propiedades:', error);
-            throw new Error(error.message || 'Error al cargar reservaciones de propiedades');
+            throw new Error(error.message || 'No se pudieron cargar las reservaciones');
         }
     }
 
-    async confirmReservation(id: string): Promise<{ message: string; data: Reservation }> {
+    async confirmReservation(id: string): Promise<Reservation> {
         try {
-            const response = await httpClient.patch<{ message: string; data: Reservation }>(
+            return await httpClient.patch<Reservation>(
                 API_ENDPOINTS.reservations.confirm(id),
                 {}
             );
-            return response;
         } catch (error: any) {
-            console.error(`Error al confirmar reservación ${id}:`, error);
-            throw new Error(error.message || 'Error al confirmar la reservación');
+            console.error('Error al confirmar reservación:', error);
+            throw new Error(error.message || 'No se pudo confirmar la reservación');
         }
     }
 
-    async rejectReservation(id: string): Promise<{ message: string; data: Reservation }> {
+    async rejectReservation(id: string, reason?: string): Promise<Reservation> {
         try {
-            const response = await httpClient.patch<{ message: string; data: Reservation }>(
+            return await httpClient.patch<Reservation>(
                 API_ENDPOINTS.reservations.reject(id),
-                {}
+                reason ? { rejection_reason: reason } : {}
             );
-            return response;
         } catch (error: any) {
-            console.error(`Error al rechazar reservación ${id}:`, error);
-            throw new Error(error.message || 'Error al rechazar la reservación');
+            console.error('Error al rechazar reservación:', error);
+            throw new Error(error.message || 'No se pudo rechazar la reservación');
         }
     }
 
-    async completeReservation(id: string): Promise<{ message: string; data: Reservation }> {
+    async completeReservation(id: string): Promise<Reservation> {
         try {
-            const response = await httpClient.patch<{ message: string; data: Reservation }>(
+            return await httpClient.patch<Reservation>(
                 API_ENDPOINTS.reservations.complete(id),
                 {}
             );
-            return response;
         } catch (error: any) {
-            console.error(`Error al completar reservación ${id}:`, error);
-            throw new Error(error.message || 'Error al completar la reservación');
+            console.error('Error al completar reservación:', error);
+            throw new Error(error.message || 'No se pudo completar la reservación');
         }
     }
 
     async getCalendar(params: CalendarParams): Promise<any> {
         try {
-            const response = await httpClient.get<any>(
+            const queryParams: Record<string, string> = {
+                hotel_id: params.hotel_id,
+                month: String(params.month),
+                year: String(params.year),
+            };
+
+            return await httpClient.get<any>(
                 API_ENDPOINTS.reservations.calendar,
-                params as any
+                { params: queryParams }
             );
-            return response;
         } catch (error: any) {
             console.error('Error al obtener calendario:', error);
-            throw new Error(error.message || 'Error al cargar el calendario');
+            throw new Error(error.message || 'No se pudo cargar el calendario');
         }
     }
 }

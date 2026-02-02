@@ -1,39 +1,53 @@
 import { memo } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuthContext } from "../context/AuthContext";
 import { Hotel } from "../../domain/entities/Hotel";
+import { WishlistButton } from "./common/WishlistButton";
+import { getMediaUrl } from "../../config/api.config";
 
 interface HotelCardProps {
-  hotel: Hotel;
-  isSelected: boolean;
-  onClick: () => void;
+    hotel: Hotel;
+    isSelected: boolean;
+    onClick: () => void;
 }
 
 const HotelCard = memo(function HotelCard({ hotel, isSelected, onClick }: HotelCardProps) {
-  const navigate = useNavigate();
+    const navigate = useNavigate();
+    const { isAuthenticated } = useAuthContext();
 
-  const handleViewDetails = (e: React.MouseEvent) => {
-      e.stopPropagation();
-      navigate(`/listing/${hotel.id}`);
-  };
-
-  return (
-    <div
-      onClick={onClick}
-      className={`
-        group relative flex flex-col bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300
-        ${
-          isSelected
-            ? "ring-2 ring-secondary shadow-xl scale-[1.02]"
-            : "border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1"
+    const handleViewDetails = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        
+        // Si no está autenticado, guardar la URL de destino y redirigir a login
+        if (!isAuthenticated) {
+            localStorage.setItem('redirectAfterLogin', `/listing/${hotel.id}`);
+            navigate('/login');
+        } else {
+            // Si está autenticado, ir directamente a los detalles
+            navigate(`/listing/${hotel.id}`);
         }
+    };
+
+    return (
+        <div
+            onClick={onClick}
+            className={`
+        group relative flex flex-col bg-white rounded-2xl overflow-hidden cursor-pointer transition-all duration-300
+        ${isSelected
+                    ? "ring-2 ring-secondary shadow-xl scale-[1.02]"
+                    : "border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-1"
+                }
       `}
-    >
-      <div className="relative h-48 w-full overflow-hidden bg-gray-200">
-        <img
-          src={hotel.imageUrl}
-          alt={hotel.name}
-          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-        />
+        >
+            <div className="relative h-48 w-full overflow-hidden bg-gray-200">
+                <img
+                    src={getMediaUrl(hotel.images[0] || '')}
+                    alt={hotel.name}
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                />
+                <div className="absolute top-3 left-3 z-10">
+                    <WishlistButton hotelId={hotel.id} />
+                </div>
                 <div className="absolute top-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-lg flex items-center gap-1 shadow-sm">
                     <svg className="w-4 h-4 text-yellow-400" fill="currentColor" viewBox="0 0 20 20">
                         <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
@@ -52,7 +66,7 @@ const HotelCard = memo(function HotelCard({ hotel, isSelected, onClick }: HotelC
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
                         </svg>
-                        {hotel.city}, {hotel.country}
+                        {hotel.address.city}, {hotel.address.country}
                     </p>
                 </div>
 
@@ -72,15 +86,18 @@ const HotelCard = memo(function HotelCard({ hotel, isSelected, onClick }: HotelC
 
                 <div className="mt-auto pt-3 border-t border-gray-100 flex items-end justify-between">
                     <div>
-                        <p className="text-xs text-app-text font-medium">Desde</p>
+                        <p className="text-xs text-gray-500 font-medium mb-1">Desde</p>
                         <div className="flex items-baseline gap-1">
-                            <span className="text-xl font-bold text-app-text">${hotel.pricePerNight}</span>
+                            <span className="text-2xl font-bold text-primary">${hotel.min_price || 'N/A'}</span>
                             <span className="text-sm text-gray-500">/noche</span>
                         </div>
                     </div>
-                    <button 
+                    <button
                         onClick={handleViewDetails}
-                        className={`px-4 py-2 rounded-lg text-sm font-semibold transition-colors ${isSelected ? 'bg-primary text-secondary' : 'bg-app-background text-app-text group-hover:bg-primary group-hover:text-secondary'}`}
+                        className={`px-5 py-2.5 rounded-xl text-sm font-semibold transition-all shadow-sm hover:shadow-md transform hover:-translate-y-0.5 ${isSelected
+                                ? 'bg-secondary text-white'
+                                : 'bg-primary text-white hover:bg-opacity-90'
+                            }`}
                     >
                         Ver Detalles
                     </button>
